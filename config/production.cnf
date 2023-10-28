@@ -1,0 +1,9 @@
+[client]
+database = disary_bd
+host = 10.10.201.4
+user = disary
+port = 3306
+password = D1S@rY(7)One
+default-character-set = utf8
+
+

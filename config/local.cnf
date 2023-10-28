@@ -1,0 +1,7 @@
+[client]
+database = water_services_bd
+host = localhost
+user = root
+port = 3306
+password =
+default-character-set = utf8

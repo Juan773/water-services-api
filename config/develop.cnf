@@ -1,0 +1,7 @@
+[client]
+database = railway
+host = viaduct.proxy.rlwy.net
+user = root
+port = 15704
+password = He1CfbCGahbf2ACcFCB5hca4BCeGGhaf
+default-character-set = utf8
