@@ -35,7 +35,10 @@ class PersonBasicSerializer(serializers.ModelSerializer):
         if request:
             dominio = HostValues.domain(request)
             if q.logo:
-                foto = dominio + q.thumbnail.url
+                if q.thumbnail:
+                    foto = dominio + q.thumbnail.url
+                else:
+                    foto = ""
             else:
                 foto = ""
         return foto
