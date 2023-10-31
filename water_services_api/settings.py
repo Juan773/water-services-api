@@ -48,7 +48,8 @@ INSTALLED_APPS = [
     'corsheaders',
 
     'water_services_api.apps.configuration',
-    'water_services_api.apps.security'
+    'water_services_api.apps.security',
+    'water_services_api.apps.operation'
 ]
 
 MIDDLEWARE = [
@@ -96,7 +97,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'OPTIONS': {
             # 'read_default_file': os.path.join(BASE_DIR, 'config/my.cnf'),
-            'read_default_file': os.path.join(BASE_DIR, 'config/develop.cnf'),
+            'read_default_file': os.path.join(BASE_DIR, 'config/local.cnf'),
         },
     }
 }
