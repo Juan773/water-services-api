@@ -11,6 +11,7 @@ dir_storage = "configuration/people"
 class Person(TimeStampedModel):
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
+    full_name = models.CharField(max_length=200)
     country = models.ForeignKey(Country, related_name='country_person', blank=True, null=True,
                                 on_delete=models.PROTECT)
     ubigeo = models.ForeignKey(Ubigeo, related_name='ubigeo_person',
@@ -33,11 +34,6 @@ class Person(TimeStampedModel):
             ('update_person', 'Actualizar persona'),
             ('delete_person', 'Eliminar persona'),
         )
-
-    @property
-    def full_name(self):
-        full_name = "%s %s" % (self.first_name, self.last_name)
-        return full_name
 
     def __str__(self):
         return self.full_name
