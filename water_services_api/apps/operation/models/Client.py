@@ -20,6 +20,7 @@ class Client(TimeStampedModel):
     lot = models.CharField(max_length=2, blank=True, null=True)
     user = models.ForeignKey(User, related_name='user_client', blank=True, null=True,
                              on_delete=models.PROTECT)
+    is_retired = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
 
     class Meta:

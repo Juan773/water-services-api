@@ -1,5 +1,5 @@
 [client]
-database = railway v2
+database = railway
 host = viaduct.proxy.rlwy.net
 user = root
 port = 15704
