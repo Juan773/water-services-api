@@ -26,5 +26,6 @@ urlpatterns = [
     path('outh2/', include('oauth2_provider.urls', namespace='oauth2_provider')),
     path('api/configuration/', include('water_services_api.apps.configuration.urls')),
     path('api/security/', include('water_services_api.apps.security.urls')),
+    path('api/operation/', include('water_services_api.apps.operation.urls')),
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
