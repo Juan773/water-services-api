@@ -16,9 +16,9 @@ class Person(TimeStampedModel):
                                 on_delete=models.PROTECT)
     ubigeo = models.ForeignKey(Ubigeo, related_name='ubigeo_person',
                                blank=True, null=True, on_delete=models.PROTECT, default=1)
-    document_type = models.ForeignKey(DocumentType, related_name='document_type_person', blank=False, null=False,
+    document_type = models.ForeignKey(DocumentType, related_name='document_type_person', blank=True, null=True,
                                       on_delete=models.PROTECT)
-    document_number = models.CharField(max_length=20)
+    document_number = models.CharField(max_length=20, blank=True, null=True)
     phone_code = models.CharField(blank=True, null=True, max_length=3, default=51)
     phone_number = models.CharField(blank=True, null=True, max_length=10)
     logo = models.ImageField(upload_to=dir_storage, blank=True, null=True)

@@ -1,6 +1,8 @@
 from django.contrib.auth.models import User
 from django.db import models
+from django.db.models import Max
 
+from water_services_api import settings
 from water_services_api.apps.configuration.models.PaymentMethod import PaymentMethod
 from water_services_api.apps.core.models import TimeStampedModel
 from water_services_api.apps.operation.models.Client import Client
@@ -23,6 +25,17 @@ class Payment(TimeStampedModel):
     user = models.ForeignKey(User, related_name='user_payment', blank=True, null=True,
                              on_delete=models.PROTECT)
     is_active = models.BooleanField(default=True)
+
+    def save(self, *args, **kwargs):
+        self.serie_payment = settings.SERIE_PAYMENT
+        orders = Payment.objects.filter(serie_payment=settings.SERIE_PAYMENT)
+
+        if orders.exists() and self._state.adding:
+            last_order = orders.aggregate(Max('nro_payment'))
+            self.order = str(int(last_order.nro_payment__max) + 1).zfill(settings.DIGITS_NRO_PAYMENT)
+        else:
+            self.order = str(1).zfill(settings.DIGITS_NRO_PAYMENT)
+        super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = 'Pago'

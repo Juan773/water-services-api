@@ -220,25 +220,19 @@ class FunctionsViewSet(viewsets.ViewSet):
         id = request.query_params.get('id', None)
         user = User.objects.get(pk=id)
         if user and user.id:
-            applications = []
             per_id = user.person_id
             data = {}
             ubigeo = None
-            referrer = None
             if per_id:
                 data = PersonInfo(request, per_id)
                 if data['ubigeo']:
                     ubigeo = Ubigeo.objects.get(pk=data['ubigeo'])
-                if data['referrer']:
-                    referrer = Person.objects.get(pk=data['referrer'])
             data['date_joined'] = user.date_joined
             data['is_active'] = user.is_active
             data['username'] = user.username
             data['email'] = user.email
             if data['ubigeo']:
                 data['ubigeo'] = UbigeoListSerializer(ubigeo, many=False).data
-            if data['referrer']:
-                data['referrer'] = PersonBasicSerializer(referrer, many=False).data
             result = parse_success(data)
             return Response(result, status=status.HTTP_200_OK)
         else:

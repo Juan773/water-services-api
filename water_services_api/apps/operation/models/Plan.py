@@ -10,9 +10,9 @@ class Plan(TimeStampedModel):
     cost = models.DecimalField(max_digits=18, decimal_places=2, default=0)
     mora = models.DecimalField(max_digits=18, decimal_places=2, default=0)
     other_expenses = models.DecimalField(max_digits=18, decimal_places=2, default=0)
-    extension_days = models.DecimalField(max_digits=18, decimal_places=0, default=5)
-    retired_extension_days = models.DecimalField(max_digits=18, decimal_places=0, default=5)
-    reconnection_cost = models.DecimalField(max_digits=18, decimal_places=2, default=5)
+    extension_days = models.DecimalField(max_digits=18, decimal_places=0, default=0)
+    retired_extension_days = models.DecimalField(max_digits=18, decimal_places=0, default=0, blank=True, null=True)
+    reconnection_cost = models.DecimalField(max_digits=18, decimal_places=2, default=0)
     client_type = models.ForeignKey(ClientType, related_name='client_type_plan', on_delete=models.PROTECT)
     is_active = models.BooleanField(default=True)
 
