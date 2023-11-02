@@ -123,7 +123,7 @@ class ClientViewSet(CustomPagination, DefaultViewSetMixin, viewsets.ModelViewSet
             block = data['block'].strip()
             lot = data['lot'].strip()
             exist_document = Person.objects.filter(document_number__iexact=document_number)\
-                .exclude(id=int(data['person_id']+'')).values('id').first()
+                .exclude(id=int("%s" % (data['person_id']))).values('id').first()
 
             if exist_document:
                 result = dict(
@@ -136,7 +136,7 @@ class ClientViewSet(CustomPagination, DefaultViewSetMixin, viewsets.ModelViewSet
                 return Response(result, status=status.HTTP_400_BAD_REQUEST)
 
             exist_block_lot = Client.objects.filter(block__iexact=block, lot__iexact=lot)\
-                .exclude(id=int(data['id']+'')).values('id').first()
+                .exclude(id=int("%s" % (data['id']))).values('id').first()
 
             if exist_block_lot:
                 result = dict(
@@ -166,7 +166,7 @@ class ClientViewSet(CustomPagination, DefaultViewSetMixin, viewsets.ModelViewSet
                 full_name="%s %s" % (data_parse['first_name'], data_parse['last_name'])
             )
 
-            Person.objects.filter(pk=int(data['person_id']+'')).update(**data_per)
+            Person.objects.filter(pk=int("%s" % (data['person_id']))).update(**data_per)
 
             data_client = dict(
                 client_type_id=data['client_type_id'],
@@ -178,8 +178,8 @@ class ClientViewSet(CustomPagination, DefaultViewSetMixin, viewsets.ModelViewSet
                 is_active=data['is_active']
             )
 
-            Client.objects.filter(pk=int(data['id']+'')).update(**data_client)
-            model = Client.objects.get(id=int(data['id']+''))
+            Client.objects.filter(pk=int("%s" % (data['id']))).update(**data_client)
+            model = Client.objects.get(id=int("%s" % (data['id'])))
             result = parse_success(
                 self.get_serializer(model).data, "Se actualizó correctamente"
             )

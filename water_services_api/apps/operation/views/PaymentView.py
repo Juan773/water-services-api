@@ -204,8 +204,8 @@ class PaymentViewSet(CustomPagination, DefaultViewSetMixin, viewsets.ModelViewSe
             result = parse_success(result)
             return Response(result, status=status.HTTP_400_BAD_REQUEST)
 
-            # p = Payment.objects.filter(pk=int(data['id']+'')).update(**data)
-            # model = Payment.objects.get(id=int(data['id']+''))
+            # p = Payment.objects.filter(pk=int("%s" % (data['id']))).update(**data)
+            # model = Payment.objects.get(id=int("%s" % (data['id'])))
             # result = parse_success(
             #     self.get_serializer(model).data, "Se actualizó correctamente"
             # )

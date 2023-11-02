@@ -55,8 +55,8 @@ class ServiceViewSet(CustomPagination, DefaultViewSetMixin, viewsets.ModelViewSe
     def update_(self, request, pk=None):
         data = request.data
         try:
-            p = Service.objects.filter(pk=int(data['id']+'')).update(**data)
-            model = Service.objects.get(id=int(data['id']+''))
+            p = Service.objects.filter(pk=int("%s" % (data['id']))).update(**data)
+            model = Service.objects.get(id=int("%s" % (data['id'])))
             result = parse_success(
                 self.get_serializer(model).data, "Se actualizó correctamente"
             )
