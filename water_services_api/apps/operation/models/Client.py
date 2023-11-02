@@ -21,6 +21,7 @@ class Client(TimeStampedModel):
     user = models.ForeignKey(User, related_name='user_client', blank=True, null=True,
                              on_delete=models.PROTECT)
     is_retired = models.BooleanField(default=False)
+    is_finalized_contract = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
 
     class Meta:
