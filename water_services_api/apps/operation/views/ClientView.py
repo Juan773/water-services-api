@@ -19,7 +19,8 @@ from water_services_api.apps.core.pagination import CustomPagination
 class ClientViewSet(CustomPagination, DefaultViewSetMixin, viewsets.ModelViewSet):
     queryset = Client.objects.all()
     serializer_class = ClientSerializer
-    search_fields = ('person__full_name', 'person__document_number', 'person__block', 'person__lot',)
+    search_fields = ('person__first_name', 'person__last_name', 'person__full_name', 'person__document_number',
+                     'block', 'lot',)
     ordering_fields = ('person__full_name',)
 
     @action(detail=False, methods=['post'], permission_classes=[DisaryPermission, ],
