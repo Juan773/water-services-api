@@ -6,7 +6,7 @@ from water_services_api import settings
 from water_services_api.apps.configuration.models.PaymentMethod import PaymentMethod
 from water_services_api.apps.core.models import TimeStampedModel
 from water_services_api.apps.operation.models.Client import Client
-from water_services_api.apps.operation.models.Plan import Plan
+from water_services_api.apps.operation.models.Quota import Quota
 from water_services_api.apps.operation.models.Service import Service
 
 dir_storage = "operation/payment"
@@ -15,9 +15,7 @@ dir_storage = "operation/payment"
 class Payment(TimeStampedModel):
     client = models.ForeignKey(Client, related_name='client_payment', on_delete=models.PROTECT)
     date = models.DateTimeField()
-    month = models.IntegerField()
-    year = models.IntegerField()
-    plan = models.ForeignKey(Plan, related_name='plan_payment', blank=True, null=True, on_delete=models.PROTECT)
+    quota = models.ForeignKey(Quota, related_name='quota_payment', blank=True, null=True, on_delete=models.PROTECT)
     payment_method = models.ForeignKey(PaymentMethod, related_name='payment_method_payment', on_delete=models.PROTECT)
     serie_payment = models.CharField(max_length=4)
     nro_payment = models.CharField(max_length=20)

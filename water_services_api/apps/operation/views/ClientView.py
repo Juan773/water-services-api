@@ -8,6 +8,7 @@ from django.db import transaction
 
 from water_services_api.apps.configuration.models.Person import Person
 from water_services_api.apps.operation.models.Client import Client
+from water_services_api.apps.operation.models.Plan import Plan
 from water_services_api.apps.operation.permissions.Client import ClientPermissions as DisaryPermission
 from water_services_api.apps.operation.serializers.Client import ClientSerializer
 from water_services_api.apps.core.SearchFilter import search_filter, keys_add_none
@@ -81,9 +82,11 @@ class ClientViewSet(CustomPagination, DefaultViewSetMixin, viewsets.ModelViewSet
 
                 user_id = request.user.id
 
+                client_type_id = Plan.objects.filter(pk=data['plan_id']).values('id').first()
+
                 data_client = dict(
                     person_id=person_id,
-                    client_type_id=data['client_type_id'],
+                    client_type_id=client_type_id,
                     plan_id=data['plan_id'],
                     situation_id=data['situation_id'],
                     user_id=user_id,
@@ -169,8 +172,10 @@ class ClientViewSet(CustomPagination, DefaultViewSetMixin, viewsets.ModelViewSet
 
             Person.objects.filter(pk=int("%s" % (data['person_id']))).update(**data_per)
 
+            client_type_id = Plan.objects.filter(pk=data['plan_id']).values('id').first()
+
             data_client = dict(
-                client_type_id=data['client_type_id'],
+                client_type_id=client_type_id,
                 plan_id=data['plan_id'],
                 situation_id=data['situation_id'],
                 block=data['block'],
