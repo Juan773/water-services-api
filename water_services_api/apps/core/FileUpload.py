@@ -6,6 +6,7 @@ from PIL import Image
 import time
 
 from water_services_api.apps.configuration.models import Person
+from water_services_api.apps.operation.models import Payment
 
 folder_storage = "storage"
 
@@ -97,6 +98,10 @@ class FileUpload():
 
     def configuration_person(column, up_file):
         dir_storage = "%s%s" % (Person.dir_storage, '/')
+        return util_save_img(column, up_file, dir_storage)
+
+    def operation_payment(column, up_file):
+        dir_storage = "%s%s" % (Payment.dir_storage, '/')
         return util_save_img(column, up_file, dir_storage)
 
     def valida_extension(extensiones, up_file):

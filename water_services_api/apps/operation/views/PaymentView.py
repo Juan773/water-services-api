@@ -8,6 +8,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db import transaction
 
+from water_services_api.apps.core.FileUpload import FileUpload
 from water_services_api.apps.operation.models.Client import Client
 from water_services_api.apps.operation.models.Payment import Payment, PaymentDetail
 from water_services_api.apps.operation.models.Plan import Plan
@@ -173,6 +174,7 @@ class PaymentViewSet(CustomPagination, DefaultViewSetMixin, viewsets.ModelViewSe
 
                 p.total = total
                 p.save()
+                self.save_file_operation(p.id, request)
                 result = parse_success(
                     self.get_serializer(p).data,
                     "Se agregó correctamente",
@@ -181,6 +183,18 @@ class PaymentViewSet(CustomPagination, DefaultViewSetMixin, viewsets.ModelViewSe
         except Exception as e:
             error = parse_error(str(e))
         return Response(error, status=status.HTTP_400_BAD_REQUEST)
+
+    def save_file_operation(self, payment_id, request):
+        files = request.FILES
+        if files and 'file_operation' in files:
+            mode = Payment.objects.filter(pk=payment_id).values('file_operation').first()
+
+            data_payment = {
+                'file_operation': FileUpload.operation_payment('file_operation', files['file_operation']),
+            }
+            pe = Payment.objects.filter(pk=payment_id).update(**data_payment)
+            if pe and mode['file_operation']:
+                FileUpload.delete_file(mode['file_operation'])
 
     @action(detail=False, methods=['get'], permission_classes=[DisaryPermission, ],
             url_path='edit', url_name='edit')

@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from django.db import transaction
 
 from water_services_api.apps.configuration.models.Person import Person
+from water_services_api.apps.core.FileUpload import FileUpload
 from water_services_api.apps.operation.models.Client import Client
 from water_services_api.apps.operation.models.Plan import Plan
 from water_services_api.apps.operation.permissions.Client import ClientPermissions as DisaryPermission
@@ -97,6 +98,7 @@ class ClientViewSet(CustomPagination, DefaultViewSetMixin, viewsets.ModelViewSet
                 )
 
                 p = Client.objects.create(**data_client)
+                self.save_logo_custom(person_id, request)
                 result = parse_success(
                     self.get_serializer(p).data,
                     "Se agregó correctamente",
@@ -105,6 +107,20 @@ class ClientViewSet(CustomPagination, DefaultViewSetMixin, viewsets.ModelViewSet
         except Exception as e:
             error = parse_error(str(e))
         return Response(error, status=status.HTTP_400_BAD_REQUEST)
+
+    def save_logo_custom(self, link_id, request):
+        files = request.FILES
+        if files and 'logo' in files:
+            mode = Person.objects.filter(pk=link_id).values('logo', 'thumbnail').first()
+
+            data_link = {
+                'logo': FileUpload.configuration_person('logo', files['logo']),
+                'thumbnail': FileUpload.configuration_person('thumbnail', files['logo'])
+            }
+            pe = Person.objects.filter(pk=link_id).update(**data_link)
+            if pe and mode['logo']:
+                FileUpload.delete_file(mode['logo'])
+                FileUpload.delete_file(mode['thumbnail'])
 
     @action(detail=False, methods=['get'], permission_classes=[DisaryPermission, ],
             url_path='edit', url_name='edit')
@@ -186,6 +202,9 @@ class ClientViewSet(CustomPagination, DefaultViewSetMixin, viewsets.ModelViewSet
 
             Client.objects.filter(pk=int("%s" % (data['id']))).update(**data_client)
             model = Client.objects.get(id=int("%s" % (data['id'])))
+
+            self.save_logo_custom(data['person_id'], request)
+
             result = parse_success(
                 self.get_serializer(model).data, "Se actualizó correctamente"
             )
