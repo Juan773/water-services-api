@@ -21,7 +21,7 @@ class ClientViewSet(CustomPagination, DefaultViewSetMixin, viewsets.ModelViewSet
     serializer_class = ClientSerializer
     search_fields = ('person__first_name', 'person__last_name', 'person__full_name', 'person__document_number',
                      'block', 'lot',)
-    ordering_fields = ('person__full_name',)
+    ordering_fields = ('person__last_name', 'person__full_name')
 
     @action(detail=False, methods=['post'], permission_classes=[DisaryPermission, ],
             url_path='add', url_name='add')

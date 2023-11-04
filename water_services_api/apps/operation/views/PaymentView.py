@@ -23,8 +23,10 @@ from water_services_api.apps.core.pagination import CustomPagination
 class PaymentViewSet(CustomPagination, DefaultViewSetMixin, viewsets.ModelViewSet):
     queryset = Payment.objects.all()
     serializer_class = PaymentSerializer
-    search_fields = ('client__full_name', )
-    ordering_fields = ('client', )
+    search_fields = ('client__person__first_name', 'client__person__last_name', 'client__person__full_name',
+                     'client__person__document_number', 'client__block', 'client__lot', 'serie_payment', 'nro_payment',
+                     'nro_operation')
+    ordering_fields = ('date', 'client__person__last_name', 'client__person__full_name')
 
     @action(detail=False, methods=['post'], permission_classes=[DisaryPermission, ],
             url_path='add', url_name='add')
