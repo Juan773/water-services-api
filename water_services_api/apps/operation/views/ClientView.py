@@ -66,7 +66,7 @@ class ClientViewSet(CustomPagination, DefaultViewSetMixin, viewsets.ModelViewSet
                 if data_parse['document_number'] is not None:
                     document_type_id = 1  # DNI
                 if data_parse['phone_number'] is not None:
-                    phone_code = '51',  # Codigo de Peru
+                    phone_code = '51'  # Codigo de Peru
                 data_per = dict(
                     first_name=data_parse['first_name'],
                     last_name=data_parse['last_name'],
