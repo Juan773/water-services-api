@@ -12,6 +12,7 @@ class Plan(TimeStampedModel):
     other_expenses = models.DecimalField(max_digits=18, decimal_places=2, default=0)
     extension_days = models.DecimalField(max_digits=18, decimal_places=0, default=0)
     retired_extension_days = models.DecimalField(max_digits=18, decimal_places=0, default=0, blank=True, null=True)
+    reconnection_months = models.DecimalField(max_digits=3, decimal_places=0, default=0)
     reconnection_cost = models.DecimalField(max_digits=18, decimal_places=2, default=0)
     client_type = models.ForeignKey(ClientType, related_name='client_type_plan', on_delete=models.PROTECT)
     is_active = models.BooleanField(default=True)

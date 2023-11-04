@@ -1,16 +1,22 @@
 from rest_framework import serializers
 
+from water_services_api.apps.configuration.serializers.ClientType import ClientTypeSerializer
 from water_services_api.apps.configuration.serializers.Person import PersonBasicSerializer
+from water_services_api.apps.configuration.serializers.Situation import SituationSerializer
 from water_services_api.apps.core.HostValues import HostValues
 from water_services_api.apps.operation.models.Client import Client
+from water_services_api.apps.operation.serializers.Plan import PlanBasicSerializer
 
 
 class ClientSerializer(serializers.ModelSerializer):
     person = PersonBasicSerializer(many=False, read_only=True)
+    plan = PlanBasicSerializer(many=False, read_only=True)
+    client_type = ClientTypeSerializer(many=False, read_only=True)
+    situation = SituationSerializer(many=False, read_only=True)
 
     class Meta:
         model = Client
-        fields = ('id', 'person', 'person_id', 'client_type_id', 'situation_id', 'plan_id', 'block', 'lot',
+        fields = ('id', 'person', 'person_id', 'client_type', 'client_type_id', 'situation', 'situation_id', 'plan', 'plan_id', 'block', 'lot',
                   'is_retired', 'is_finalized_contract', 'is_active')
 
 
