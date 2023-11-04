@@ -1,10 +1,16 @@
+import datetime
 import decimal
 import json
 import re
 
-from django.db.models import Q
+from django.db.models import Q, Value
+from django.db.models.functions import Concat, LPad
 
 from water_services_api.apps.core.exceptions import NumberDecimalFormatException, ErrorNumberConvertDecimal
+from water_services_api.apps.operation.models.Client import Client
+from water_services_api.apps.operation.models.Plan import Plan
+from water_services_api.apps.operation.models.Quota import Quota
+from water_services_api.apps.operation.models.Service import Service
 from water_services_api.settings import IS_PRODUCTION
 
 
@@ -119,3 +125,67 @@ def to_bool(value):
     if str(value).lower() in ("no", "n", "false", "f", "0", "0.0", "", "none", "[]", "{}"): return False
     raise Exception('Invalid value for boolean conversion: ' + str(value))
 
+
+def get_total_month(client_id, date, month, year):
+
+    total_paid = Quota.objects.filter(month=month, year=year, is_paid=True).values('total').first()
+    if total_paid:
+        return total_paid
+    client = Client.objects.filter(pk=client_id).first()
+    plan = Plan.objects.filter(pk=client.plan_id).first()
+    services = Service.objects.filter(is_active=True)
+    cost_reconnection = 0
+
+    date = datetime.datetime.strptime(date, '%Y-%m-%d').date()
+    month_date = date.month
+    year_date = date.year
+    day_date = date.day
+    year_month_date = int("%s%s" % (year_date, LPad(month_date, 2, Value('0'))))
+    year_month = int("%s%s" % (year, LPad(month, 2, Value('0'))))
+
+    is_finalized_contract = False
+    if client.date_finalized_contract and client.is_finalized_contract is True:
+        date_finalized = datetime.datetime.strptime(client.date_finalized_contract, '%Y-%m-%d').date()
+        year_month_date_finalized = int("%s%s" % (date_finalized.year, LPad(date_finalized.month, 2, Value('0'))))
+        if year_month_date_finalized <= year_month:
+            is_finalized_contract = True
+
+    if is_finalized_contract is False:
+        # generate months not paid
+        quotas_not_paid = Quota.objects.filter(client_id=client.id)
+        count = 0
+        if quotas_not_paid.exists():
+            quotas_not_paid = quotas_not_paid.annotate(search_quota=Concat('year', LPad('month', 2, Value('0'))))
+            count = quotas_not_paid.filter(search_quota__lt=year_month_date)
+
+        # calculate the cost for reconnection
+        if count == plan.reconnection_months:
+            if client.is_retired is False and day_date > plan.extension_days:
+                cost_reconnection = plan.reconnection_cost
+            elif client.is_retired is True and day_date > plan.retired_extension_days:
+                cost_reconnection = plan.reconnection_cost
+        elif count > plan.reconnection_months:
+            cost_reconnection = plan.reconnection_cost
+
+    total = 0
+
+    if year_month == year_month-1:
+        total = total + cost_reconnection
+
+    if client and is_finalized_contract is False:
+        if plan.client_type.code == 'socio':
+            total = total + plan.cost
+        elif plan.client_type.code == 'user':
+            total = total + plan.cost
+
+        if client.is_retired is False and plan.extension_days < day_date:
+            total = total + plan.reconnection_cost
+        elif client.is_retired is True and plan.retired_extension_days < day_date:
+            total = total + plan.reconnection_cost
+
+        for detail in services:
+            total = total + detail.cost
+    elif plan:
+        total = total + plan.other_expenses
+
+    return total
