@@ -83,7 +83,7 @@ class ClientViewSet(CustomPagination, DefaultViewSetMixin, viewsets.ModelViewSet
 
                 user_id = request.user.id
 
-                client_type_id = Plan.objects.filter(pk=data['plan_id']).values('id').first()
+                client_type_id = Plan.objects.filter(pk=data['plan_id']).values('client_type_id').first()
 
                 data_client = dict(
                     person_id=person_id,
