@@ -49,19 +49,26 @@ class FunctionsViewSet(viewsets.ViewSet):
                 year = date.year
                 day = date.day
 
-                min_month = month
-                min_year = year
+                # min_month = month
+                # min_year = year
                 max_month = 12
                 max_year = year
-
-                # Agregar la fecha de inicio del contrato
-                # Validar si todos los meses estan pagados y poner el minimo mes al ultimo mes pagado
-
-                quotas = Quota.objects.filter(client_id=client_id, is_paid=False)
+                client_date_start = datetime.datetime.strptime(client.start_date, "%Y/%m/%d")
+                client_year_month = int("%s%s" % (client_date_start.year, str(client_date_start.month).zfill(2)))
+                quotas = Quota.objects.filter(client_id=client_id, year_month__gte=client_year_month)
                 if quotas.exists():
-                    min_quota = quotas.order_by('year_month')[0]
-                    min_month = min_quota.month
-                    min_year = min_quota.year
+                    quota_not_paid = quotas.filter(is_paid=False)
+                    if quota_not_paid.exists():
+                        min_quota = quota_not_paid.order_by('year_month')[0]
+                        min_month = min_quota.month
+                        min_year = min_quota.year
+                    else:
+                        min_quota = quotas.order_by('year_month')[0]
+                        min_month = min_quota.month
+                        min_year = min_quota.year
+                else:
+                    min_month = client_date_start.month
+                    min_year = client_date_start.year
 
                 max_date_old = "%s/%s/%s" % (year, month, 1)
                 min_date_old = "%s/%s/%s" % (min_year, min_month, 1)
@@ -131,8 +138,8 @@ class FunctionsViewSet(viewsets.ViewSet):
                     cost_administrative = 0
 
                     is_finalized_contract = False
-                    if client.date_finalized_contract and client.is_finalized_contract is True:
-                        date_finalized = datetime.datetime.strptime(client.date_finalized_contract, '%Y-%m-%d').date()
+                    if client.end_date and client.is_finalized_contract is True:
+                        date_finalized = datetime.datetime.strptime(client.end_date, '%Y-%m-%d').date()
                         if date_finalized.month <= month_item:
                             is_finalized_contract = True
 

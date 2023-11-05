@@ -144,8 +144,8 @@ def get_total_month(client_id, date, month, year):
     year_month = int("%s%s" % (year, LPad(month, 2, Value('0'))))
 
     is_finalized_contract = False
-    if client.date_finalized_contract and client.is_finalized_contract is True:
-        date_finalized = datetime.datetime.strptime(client.date_finalized_contract, '%Y-%m-%d').date()
+    if client.end_date and client.is_finalized_contract is True:
+        date_finalized = datetime.datetime.strptime(client.end_date, '%Y-%m-%d').date()
         year_month_date_finalized = int("%s%s" % (date_finalized.year, LPad(date_finalized.month, 2, Value('0'))))
         if year_month_date_finalized <= year_month:
             is_finalized_contract = True

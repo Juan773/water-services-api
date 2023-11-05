@@ -16,6 +16,7 @@ class Client(TimeStampedModel):
                                   on_delete=models.PROTECT)
     plan = models.ForeignKey(Plan, related_name='plan_client', blank=True, null=True,
                              on_delete=models.PROTECT)
+    start_date = models.DateTimeField()
     block = models.CharField(max_length=2, blank=True, null=True)
     lot = models.CharField(max_length=2, blank=True, null=True)
     user = models.ForeignKey(User, related_name='user_client', blank=True, null=True,
@@ -23,7 +24,7 @@ class Client(TimeStampedModel):
     is_retired = models.BooleanField(default=False)
     date_retired = models.DateTimeField(blank=True, null=True)
     is_finalized_contract = models.BooleanField(default=False)
-    date_finalized_contract = models.DateTimeField(blank=True, null=True)
+    end_date = models.DateTimeField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
 
     class Meta:

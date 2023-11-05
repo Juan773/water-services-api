@@ -1,3 +1,5 @@
+import datetime
+
 from rest_framework import viewsets
 from rest_framework import permissions
 
@@ -60,7 +62,9 @@ class ClientViewSet(CustomPagination, DefaultViewSetMixin, viewsets.ModelViewSet
                     )
                     result = parse_success(result)
                     return Response(result, status=status.HTTP_400_BAD_REQUEST)
-                data_parse = keys_add_none(request.data, 'first_name,last_name,document_number,phone_number')
+                data_parse = keys_add_none(request.data, 'first_name,last_name,document_number,phone_number,start_date')
+                if data_parse['start_date'] is None:
+                    data_parse['start_date'] = datetime.datetime.now()
                 document_type_id = None
                 phone_code = None
                 if data_parse['document_number'] is not None:
@@ -93,6 +97,7 @@ class ClientViewSet(CustomPagination, DefaultViewSetMixin, viewsets.ModelViewSet
                     user_id=user_id,
                     block=data['block'],
                     lot=data['lot'],
+                    start_date=data_parse['start_date'],
                     is_retired=data['is_retired'],
                     is_active=data['is_active']
                 )
@@ -168,8 +173,10 @@ class ClientViewSet(CustomPagination, DefaultViewSetMixin, viewsets.ModelViewSet
                 )
                 result = parse_success(result)
                 return Response(result, status=status.HTTP_400_BAD_REQUEST)
-
-            data_parse = keys_add_none(request.data, 'first_name,last_name,document_number,phone_number')
+            client = Client.objects.filter(pk=int("%s" % (data['id']))).first()
+            data_parse = keys_add_none(request.data, 'first_name,last_name,document_number,phone_number,start_date')
+            if data_parse['start_date'] is None:
+                data_parse['start_date'] = client.start_date
             document_type_id = None
             phone_code = None
             if data_parse['document_number'] is not None:
@@ -196,6 +203,7 @@ class ClientViewSet(CustomPagination, DefaultViewSetMixin, viewsets.ModelViewSet
                 situation_id=data['situation_id'],
                 block=data['block'],
                 lot=data['lot'],
+                start_date=data_parse['start_date'],
                 is_retired=data['is_retired'],
                 is_active=data['is_active']
             )
