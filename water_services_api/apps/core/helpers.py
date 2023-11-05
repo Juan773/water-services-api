@@ -133,30 +133,29 @@ def get_total_month(client_id, date, month, year):
         return total_paid
     client = Client.objects.filter(pk=client_id).first()
     plan = Plan.objects.filter(pk=client.plan_id).first()
-    services = Service.objects.filter(is_active=True)
+    services = Service.objects.filter(is_active=True).values_list('id', 'cost', named=True)
     cost_reconnection = 0
 
     date = datetime.datetime.strptime(date, '%Y-%m-%d').date()
     month_date = date.month
     year_date = date.year
     day_date = date.day
-    year_month_date = int("%s%s" % (year_date, LPad(month_date, 2, Value('0'))))
-    year_month = int("%s%s" % (year, LPad(month, 2, Value('0'))))
+    year_month_date = int("%s%s" % (year_date, str(month_date).zfill(2)))
+    year_month = int("%s%s" % (year, str(month).zfill(2)))
 
     is_finalized_contract = False
     if client.end_date and client.is_finalized_contract is True:
-        date_finalized = datetime.datetime.strptime(client.end_date, '%Y-%m-%d').date()
-        year_month_date_finalized = int("%s%s" % (date_finalized.year, LPad(date_finalized.month, 2, Value('0'))))
+        date_finalized = datetime.datetime.strptime(client.end_date.strftime("%Y-%m-%d"), '%Y-%m-%d').date()
+        year_month_date_finalized = int("%s%s" % (date_finalized.year, str(date_finalized.month).zfill(2)))
         if year_month_date_finalized <= year_month:
             is_finalized_contract = True
 
+    count = 0
     if is_finalized_contract is False:
         # generate months not paid
-        quotas_not_paid = Quota.objects.filter(client_id=client.id)
-        count = 0
+        quotas_not_paid = Quota.objects.filter(client_id=client_id, is_paid=False)
         if quotas_not_paid.exists():
-            quotas_not_paid = quotas_not_paid.annotate(search_quota=Concat('year', LPad('month', 2, Value('0'))))
-            count = quotas_not_paid.filter(search_quota__lt=year_month_date)
+            count = quotas_not_paid.filter(year_month__lt=year_month_date).count()
 
         # calculate the cost for reconnection
         if count == plan.reconnection_months:
@@ -168,8 +167,7 @@ def get_total_month(client_id, date, month, year):
             cost_reconnection = plan.reconnection_cost
 
     total = 0
-
-    if year_month == year_month-1:
+    if is_finalized_contract is False and year_month == year_month_date-1:
         total = total + cost_reconnection
 
     if client and is_finalized_contract is False:
@@ -178,14 +176,81 @@ def get_total_month(client_id, date, month, year):
         elif plan.client_type.code == 'user':
             total = total + plan.cost
 
-        if client.is_retired is False and plan.extension_days < day_date:
-            total = total + plan.reconnection_cost
-        elif client.is_retired is True and plan.retired_extension_days < day_date:
-            total = total + plan.reconnection_cost
-
+        if count == 1:
+            if client.is_retired is False and plan.extension_days < day_date:
+                total = total + plan.mora
+            elif client.is_retired is True and plan.retired_extension_days < day_date:
+                total = total + plan.mora
+        elif count > 1:
+            total = total + plan.mora
         for detail in services:
             total = total + detail.cost
-    elif plan:
+    elif plan and client:
+        total = total + plan.other_expenses
+
+    return total
+
+
+def update_total_month(client_id, date, month, year):
+
+    total_paid = Quota.objects.filter(month=month, year=year, is_paid=True).values('total').first()
+    if total_paid:
+        return total_paid
+    client = Client.objects.filter(pk=client_id).first()
+    plan = Plan.objects.filter(pk=client.plan_id).first()
+    services = Service.objects.filter(is_active=True).values_list('id', 'cost', named=True)
+    cost_reconnection = 0
+
+    date = datetime.datetime.strptime(date, '%Y-%m-%d').date()
+    month_date = date.month
+    year_date = date.year
+    day_date = date.day
+    year_month_date = int("%s%s" % (year_date, str(month_date).zfill(2)))
+    year_month = int("%s%s" % (year, str(month).zfill(2)))
+
+    is_finalized_contract = False
+    if client.end_date and client.is_finalized_contract is True:
+        date_finalized = datetime.datetime.strptime(client.end_date.strftime("%Y-%m-%d"), '%Y-%m-%d').date()
+        year_month_date_finalized = int("%s%s" % (date_finalized.year, str(date_finalized.month).zfill(2)))
+        if year_month_date_finalized <= year_month:
+            is_finalized_contract = True
+
+    count = 0
+    if is_finalized_contract is False:
+        # generate months not paid
+        quotas_not_paid = Quota.objects.filter(client_id=client_id, is_paid=False)
+        if quotas_not_paid.exists():
+            count = quotas_not_paid.filter(year_month__lt=year_month_date).count()
+
+        # calculate the cost for reconnection
+        if count == plan.reconnection_months:
+            if client.is_retired is False and day_date > plan.extension_days:
+                cost_reconnection = plan.reconnection_cost
+            elif client.is_retired is True and day_date > plan.retired_extension_days:
+                cost_reconnection = plan.reconnection_cost
+        elif count > plan.reconnection_months:
+            cost_reconnection = plan.reconnection_cost
+
+    total = 0
+    if is_finalized_contract is False and year_month == year_month_date-1:
+        total = total + cost_reconnection
+
+    if client and is_finalized_contract is False:
+        if plan.client_type.code == 'socio':
+            total = total + plan.cost
+        elif plan.client_type.code == 'user':
+            total = total + plan.cost
+
+        if count == 1:
+            if client.is_retired is False and plan.extension_days < day_date:
+                total = total + plan.mora
+            elif client.is_retired is True and plan.retired_extension_days < day_date:
+                total = total + plan.mora
+        elif count > 1:
+            total = total + plan.mora
+        for detail in services:
+            total = total + detail.cost
+    elif plan and client:
         total = total + plan.other_expenses
 
     return total

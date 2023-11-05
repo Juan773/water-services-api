@@ -92,7 +92,7 @@ class FunctionsViewSet(viewsets.ViewSet):
                 elif diff_months_old > plan.reconnection_months:
                     cost_reconnection = plan.reconnection_cost
 
-            services = Service.objects.filter(is_active=True).iterator()
+            services = Service.objects.filter(is_active=True).values_list('id', 'name', 'cost', 'order', named=True)
 
             max_date = "%s/%s/%s" % (max_year, max_month, 1)
             min_date = "%s/%s/%s" % (min_year, min_month, 1)
@@ -145,7 +145,8 @@ class FunctionsViewSet(viewsets.ViewSet):
 
                     is_finalized_contract = False
                     if client.end_date and client.is_finalized_contract is True:
-                        date_finalized = datetime.datetime.strptime(client.end_date, '%Y-%m-%d').date()
+                        date_finalized = datetime.datetime.strptime(client.end_date.strftime("%Y-%m-%d"), '%Y-%m-%d').\
+                            date()
                         if date_finalized.month <= month_item:
                             is_finalized_contract = True
 
@@ -162,11 +163,11 @@ class FunctionsViewSet(viewsets.ViewSet):
 
                         if diff_months_item == 1:
                             if client.is_retired is False and plan.extension_days < day:
-                                cost_mora = plan.reconnection_cost
+                                cost_mora = plan.mora
                             elif client.is_retired is True and plan.retired_extension_days < day:
-                                cost_mora = plan.reconnection_cost
+                                cost_mora = plan.mora
                         elif diff_months_item > 1:
-                            cost_mora = plan.reconnection_cost
+                            cost_mora = plan.mora
                         total = total + cost_mora
                     elif plan:
                         cost_administrative = plan.other_expenses
@@ -180,36 +181,6 @@ class FunctionsViewSet(viewsets.ViewSet):
                         if is_finalized_contract is False:
                             cost_service = detail.cost
                         total = total + cost_service
-
-                        if q:
-                            qd = details.filter(quota_id=q.id, service_id=detail.id).first()
-                            if qd:
-                                qd.gloss = detail.name
-                                qd.cost = detail.cost
-                                qd.amount = detail.cost
-                                list_update.append(qd)
-                            else:
-                                data_quota_detail = QuotaDetail(
-                                    quota_id=q.id,
-                                    service_id=detail.id,
-                                    gloss=detail.name,
-                                    quantity=1,
-                                    cost=detail.cost,
-                                    amount=detail.cost,
-                                    order=detail.order
-                                )
-                                list_add.append(data_quota_detail)
-                        else:
-                            data_quota_detail = QuotaDetail(
-                                quota_id=q.id,
-                                service_id=detail.id,
-                                gloss=detail.name,
-                                quantity=1,
-                                cost=detail.cost,
-                                amount=detail.cost,
-                                order=detail.order
-                            )
-                            list_add.append(data_quota_detail)
 
                     if not q:
                         data_quota = dict(
@@ -225,6 +196,26 @@ class FunctionsViewSet(viewsets.ViewSet):
                     else:
                         q.total = total
                         list_update_q.append(q)
+
+                    for detail in services:
+                        qd = details.filter(quota_id=q.id, service_id=detail.id).first()
+                        if qd:
+                            qd.gloss = detail.name
+                            qd.cost = detail.cost
+                            qd.amount = detail.cost
+                            qd.order = detail.order
+                            list_update.append(qd)
+                        else:
+                            data_quota_detail = QuotaDetail(
+                                quota_id=q.id,
+                                service_id=detail.id,
+                                gloss=detail.name,
+                                quantity=1,
+                                cost=detail.cost,
+                                amount=detail.cost,
+                                order=detail.order
+                            )
+                            list_add.append(data_quota_detail)
 
                     qd = details.filter(quota_id=q.id, gloss=gloss_cost_associate).first()
 
@@ -313,14 +304,8 @@ class FunctionsViewSet(viewsets.ViewSet):
                         list_add.append(data_quota_detail)
 
                 Quota.objects.bulk_update(list_update_q, ["total"])
-                QuotaDetail.objects.bulk_create(list_add)
                 QuotaDetail.objects.bulk_update(list_update, ["gloss", "cost", "amount"])
-
-                # for key in list_update:
-                #     QuotaDetail.objects.filter(id=key).update(gloss=list_update[key]['gloss'],
-                #                                               cost=list_update[key]['cost'],
-                #                                               amount=list_update[key]['amount'])
-
+                QuotaDetail.objects.bulk_create(list_add)
                 result = parse_success(
                     '',
                     "Se agregó correctamente",

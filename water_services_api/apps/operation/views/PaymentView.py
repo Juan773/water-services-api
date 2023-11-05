@@ -32,185 +32,120 @@ class PaymentViewSet(CustomPagination, DefaultViewSetMixin, viewsets.ModelViewSe
             url_path='add', url_name='add')
     @transaction.atomic
     def add(self, request, *args, **kwargs):
+        data = request.data
+        is_different_date = False
+        data_parse = keys_add_none(data, 'date,nro_operation,client_id,payment_method_id,is_active,quota_ids')
+        if data_parse['date'] is None:
+            data_parse['date'] = datetime.datetime.now()
+            date_register = datetime.datetime.now().date().strftime("%Y-%m-%d")
+        else:
+            date_register = data_parse['date']
+
+        date_now = datetime.datetime.now().date()
+        date_pay = datetime.datetime.strptime(data_parse['date'], "%Y/%m/%d").date()
+
+        if date_pay < date_now:
+            is_different_date = True
+
+        client = Client.objects.filter(pk=data_parse['client_id']).first()
+
+        if client:
+            if client.plan_id is None:
+                result = dict(
+                    estado=False,
+                    mensaje='La persona no tiene un plan asignado.'
+                )
+                result = parse_success(result)
+                return Response(result, status=status.HTTP_400_BAD_REQUEST)
+
+        user_id = request.user.id
+
+        quota_ids = data_parse['quota_ids'].split(',')
+        quotas = Quota.objects.filter(client_id=data_parse['client_id'], id__in=quota_ids)
+        if quotas.exists():
+            min_quota = quotas.order_by('year_month')[0]
+            count_min_q = Quota.objects.filter(client_id=data_parse['client_id'],
+                                               year_month__lt=min_quota.year_month).count()
+            if count_min_q > 0:
+                result = dict(
+                    estado=False,
+                    mensaje='Existen pagos anteriores sin cancelar.'
+                )
+                result = parse_success(result)
+                return Response(result, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            result = dict(
+                estado=False,
+                mensaje='No existe el mes a cancelar.'
+            )
+            result = parse_success(result)
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)
+
+        quotas_details = QuotaDetail.objects.filter(quota_id__in=quota_ids)
+        for item in quotas:
+            if item.is_paid is True:
+                result = dict(
+                    estado=False,
+                    mensaje='El pago del %s-%s ya fue realizado.' % (item.month, item.year)
+                )
+                result = parse_success(result)
+                return Response(result, status=status.HTTP_400_BAD_REQUEST)
+
+            # verify total with total quota
+            total = get_total_month(client.id, date_register, item.month, item.year)
+
+            if total != item.total and is_different_date is False:
+                result = dict(
+                    estado=False,
+                    mensaje='La mensualidad del %s-%s no esta procesado correctamente.' % (item.month,
+                                                                                           item.year)
+                )
+                result = parse_success(result)
+                return Response(result, status=status.HTTP_400_BAD_REQUEST)
+
+        ids = []
+        list_add = []
+        list_quota_update = []
+
+        # Falta analizar cuando la fecha de pago fue antes de la fecha actual
         try:
             with transaction.atomic():
-                data = request.data
-
-                data_parse = keys_add_none(data, 'date,nro_operation,client_id,payment_method_id,is_active,quota_ids')
-                if data_parse['date'] is None:
-                    data_parse['date'] = datetime.datetime.now()
-
-                client = Client.objects.filter(pk=data_parse['client_id']).first()
-
-                if client:
-                    if client.plan_id is None:
-                        result = dict(
-                            estado=False,
-                            mensaje='La persona no tiene un plan asignado.'
-                        )
-                        result = parse_success(result)
-                        return Response(result, status=status.HTTP_400_BAD_REQUEST)
-
-                user_id = request.user.id
-
-                quota_ids = data_parse['quota_ids'].split(',')
-                quotas = Quota.objects.filter(id__in=quota_ids)
-                quotas_details = QuotaDetail.objects.filter(quota_id__in=quota_ids)
                 for item in quotas:
-                    if item.is_paid is True:
-                        result = dict(
-                            estado=False,
-                            mensaje='El pago del %s-%s ya fue realizado.' % (item.month, item.year)
-                        )
-                        result = parse_success(result)
-                        return Response(result, status=status.HTTP_400_BAD_REQUEST)
+                    details = quotas_details.filter(quota_id=item.id)
+                    total = 0
+                    for detail in details:
+                        total = total + detail.amount
 
-                    # verify total with total quota
-                    total = get_total_month(client.id, data_parse['date'], item.month, item.year)
-
-                    if total != item.total:
-                        result = dict(
-                            estado=False,
-                            mensaje='La mensualidad del %s-%s no esta procesado correctamente.' % (item.month,
-                                                                                                   item.year)
-                        )
-                        result = parse_success(result)
-                        return Response(result, status=status.HTTP_400_BAD_REQUEST)
-
-                ids = []
-                for item in quotas:
                     data_payment = dict(
                         date=data_parse['date'],
                         quota_id=item.id,
                         nro_operation=data_parse['nro_operation'],
                         client_id=data_parse['client_id'],
                         payment_method_id=data_parse['payment_method_id'],
-                        plan_id=client.plan_id,
                         user_id=user_id,
-                        is_active=1
+                        is_active=1,
+                        total=total
                     )
-
                     p = Payment.objects.create(**data_payment)
-
-                    details = quotas_details.filter(quota_id=item.id)
-                    total = 0
                     for detail in details:
-                        data_payment_detail = dict(
+                        data_payment_detail = PaymentDetail(
                             payment_id=p.id,
                             service_id=detail.service_id,
                             gloss=detail.gloss,
                             quantity=detail.quantity,
                             cost=detail.cost,
-                            amount=detail.amount
+                            amount=detail.amount,
+                            order=detail.order
                         )
-                        PaymentDetail.objects.create(**data_payment_detail)
-                        total = total + detail.amount
-
-                    p.total = total
-                    p.save()
+                        list_add.append(data_payment_detail)
                     self.save_file_operation(p.id, request)
-
+                    item.is_paid = True
+                    list_quota_update.append(item)
                     ids.append(p.id)
 
-                # plan = Plan.objects.filter(pk=client.plan_id).first()
-                #
-                # total = 0
-                # cost_associate = 0
-                # cost_user = 0
-                # if plan.client_type.code == 'socio':
-                #     cost_associate = plan.cost
-                #     total = total + cost_associate
-                # elif plan.client_type.code == 'user':
-                #     cost_user = plan.cost
-                #     total = total + cost_user
-                #
-                # data_payment_detail = dict(
-                #     payment_id=p.id,
-                #     service_id=None,
-                #     gloss='Cuota:Contrapest. por servicio agua-Socios',
-                #     quantity=1,
-                #     cost=cost_associate,
-                #     amount=cost_associate
-                # )
-                # PaymentDetail.objects.create(**data_payment_detail)
-                # data_payment_detail = dict(
-                #     payment_id=p.id,
-                #     service_id=None,
-                #     gloss='Cuota:Contrapest. por servicio agua-Usuarios',
-                #     quantity=1,
-                #     cost=cost_user,
-                #     amount=cost_user
-                # )
-                # PaymentDetail.objects.create(**data_payment_detail)
-                #
-                # reconnection_cost = 0
-                # if client.is_finalized_contract is False:
-                #     day = datetime.datetime.strptime(p.date, '%Y-%m-%d').date().day
-                #     if client.is_retired is False and plan.extension_days < day:
-                #         reconnection_cost = plan.reconnection_cost
-                #     elif client.is_retired is True and plan.retired_extension_days < day:
-                #         reconnection_cost = plan.reconnection_cost
-                #
-                # total = total + reconnection_cost
-                #
-                # data_payment_detail = dict(
-                #     payment_id=p.id,
-                #     service_id=None,
-                #     gloss='Corte/Reconexion',
-                #     quantity=1,
-                #     cost=reconnection_cost,
-                #     amount=reconnection_cost
-                # )
-                # PaymentDetail.objects.create(**data_payment_detail)
-                #
-                # mora = 0
-                # if client.is_finalized_contract is False:
-                #     day = datetime.datetime.strptime(p.date, '%Y-%m-%d').date().day
-                #     if client.is_retired is False and plan.extension_days < day:
-                #         mora = plan.reconnection_cost
-                #     elif client.is_retired is True and plan.retired_extension_days < day:
-                #         mora = plan.reconnection_cost
-                #
-                # total = total + mora
-                #
-                # data_payment_detail = dict(
-                #     payment_id=p.id,
-                #     service_id=None,
-                #     gloss='Mora',
-                #     quantity=1,
-                #     cost=mora,
-                #     amount=mora
-                # )
-                # PaymentDetail.objects.create(**data_payment_detail)
-                #
-                # if client.is_retired:
-                #     data_payment_detail = dict(
-                #         payment_id=p.id,
-                #         service_id=None,
-                #         gloss='Gastos administrativos',
-                #         quantity=1,
-                #         cost=plan.other_expenses,
-                #         amount=plan.other_expenses
-                #     )
-                #     PaymentDetail.objects.create(**data_payment_detail)
-                #     total = total + plan.other_expenses
-                #
-                # services = Service.objects.filter(is_active=True)
-                # for item in services:
-                #     data_payment_detail = dict(
-                #         payment_id=p.id,
-                #         service_id=item.id,
-                #         gloss=item.name,
-                #         quantity=1,
-                #         cost=item.cost,
-                #         amount=item.cost
-                #     )
-                #     PaymentDetail.objects.create(**data_payment_detail)
-                #     total = total + item.cost
+                PaymentDetail.objects.bulk_create(list_add)
+                Quota.objects.bulk_update(list_quota_update, ["is_paid"])
 
-                # p.total = total
-                # p.save()
-                # self.save_file_operation(p.id, request)
                 result = parse_success(
                     ids,
                     "Se agregó correctamente",
