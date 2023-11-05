@@ -83,11 +83,11 @@ class ClientViewSet(CustomPagination, DefaultViewSetMixin, viewsets.ModelViewSet
 
                 user_id = request.user.id
 
-                client_type = Plan.objects.filter(pk=data['plan_id']).first()
+                plan = Plan.objects.filter(pk=data['plan_id']).first()
 
                 data_client = dict(
                     person_id=person_id,
-                    client_type_id=client_type.client_type_id,
+                    client_type_id=plan.client_type_id,
                     plan_id=data['plan_id'],
                     situation_id=data['situation_id'],
                     user_id=user_id,
@@ -143,9 +143,9 @@ class ClientViewSet(CustomPagination, DefaultViewSetMixin, viewsets.ModelViewSet
             block = data['block'].strip()
             lot = data['lot'].strip()
             exist_document = Person.objects.filter(document_number__iexact=document_number)\
-                .exclude(id=int("%s" % (data['person_id']))).values('id').first()
+                .exclude(id=int("%s" % (data['person_id']))).first()
 
-            if exist_document:
+            if exist_document and exist_document.id:
                 result = dict(
                     document_number=data['document_number'],
                     estado=False,
@@ -156,9 +156,9 @@ class ClientViewSet(CustomPagination, DefaultViewSetMixin, viewsets.ModelViewSet
                 return Response(result, status=status.HTTP_400_BAD_REQUEST)
 
             exist_block_lot = Client.objects.filter(block__iexact=block, lot__iexact=lot)\
-                .exclude(id=int("%s" % (data['id']))).values('id').first()
+                .exclude(id=int("%s" % (data['id']))).first()
 
-            if exist_block_lot:
+            if exist_block_lot and exist_block_lot.id:
                 result = dict(
                     block=data['block'],
                     lot=data['lot'],
@@ -175,7 +175,7 @@ class ClientViewSet(CustomPagination, DefaultViewSetMixin, viewsets.ModelViewSet
             if data_parse['document_number'] is not None:
                 document_type_id = 1  # DNI
             if data_parse['phone_number'] is not None:
-                phone_code = '51',  # Codigo de Peru
+                phone_code = '51'  # Codigo de Peru
             data_per = dict(
                 first_name=data_parse['first_name'],
                 last_name=data_parse['last_name'],
@@ -188,10 +188,10 @@ class ClientViewSet(CustomPagination, DefaultViewSetMixin, viewsets.ModelViewSet
 
             Person.objects.filter(pk=int("%s" % (data['person_id']))).update(**data_per)
 
-            client_type_id = Plan.objects.filter(pk=data['plan_id']).values('id').first()
+            plan = Plan.objects.filter(pk=data['plan_id']).first()
 
             data_client = dict(
-                client_type_id=client_type_id,
+                client_type_id=plan.client_type_id,
                 plan_id=data['plan_id'],
                 situation_id=data['situation_id'],
                 block=data['block'],
