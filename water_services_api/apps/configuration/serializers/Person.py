@@ -45,7 +45,7 @@ class PersonBasicSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Person
-        fields = ('id', 'full_name', 'thumbnail', 'logo')
+        fields = ('id', 'first_name', 'last_name', 'full_name', 'thumbnail', 'logo')
     # exclude = ('created_at','updated_at',)
 
 

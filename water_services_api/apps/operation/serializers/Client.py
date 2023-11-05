@@ -16,22 +16,30 @@ class ClientSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Client
-        fields = ('id', 'person', 'person_id', 'client_type', 'client_type_id', 'situation', 'situation_id', 'plan', 'plan_id', 'block', 'lot',
-                  'is_retired', 'is_finalized_contract', 'is_active')
+        fields = ('id', 'person', 'person_id', 'client_type', 'client_type_id', 'situation', 'situation_id', 'plan',
+                  'plan_id', 'block', 'lot', 'is_retired', 'is_finalized_contract', 'is_active')
 
 
 class ClientBasicSerializer(serializers.ModelSerializer):
     logo = serializers.SerializerMethodField()
     thumbnail = serializers.SerializerMethodField()
     full_name = serializers.SerializerMethodField()
+    first_name = serializers.SerializerMethodField()
+    last_name = serializers.SerializerMethodField()
     person_id = serializers.SerializerMethodField()
 
     class Meta:
         model = Client
-        fields = ('id', 'person_id', 'full_name', 'thumbnail', 'logo')
+        fields = ('id', 'person_id', 'first_name', 'last_name', 'full_name', 'thumbnail', 'logo')
 
     def get_person_id(self, q):
         return q.person.id
+
+    def get_first_name(self, q):
+        return q.person.first_name
+
+    def get_last_name(self, q):
+        return q.person.last_name
 
     def get_full_name(self, q):
         return q.person.full_name
