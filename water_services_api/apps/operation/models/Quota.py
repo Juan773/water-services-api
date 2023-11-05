@@ -10,6 +10,7 @@ class Quota(TimeStampedModel):
     plan = models.ForeignKey(Plan, related_name='plan_quota', blank=True, null=True, on_delete=models.PROTECT)
     month = models.IntegerField()
     year = models.IntegerField()
+    year_month = models.IntegerField()
     total = models.DecimalField(max_digits=18, decimal_places=2, default=0)
     is_paid = models.BooleanField(default=False)
 
