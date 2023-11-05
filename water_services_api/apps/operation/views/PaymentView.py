@@ -43,7 +43,7 @@ class PaymentViewSet(CustomPagination, DefaultViewSetMixin, viewsets.ModelViewSe
                 client = Client.objects.filter(pk=data_parse['client_id']).first()
 
                 if client:
-                    if not client.plan_id:
+                    if client.plan_id is None:
                         result = dict(
                             estado=False,
                             mensaje='La persona no tiene un plan asignado.'

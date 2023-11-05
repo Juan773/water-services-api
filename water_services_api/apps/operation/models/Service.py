@@ -8,6 +8,7 @@ class Service(TimeStampedModel):
     description = models.CharField(max_length=500, blank=True, null=True)
     cost = models.DecimalField(max_digits=18, decimal_places=2, default=0)
     code = models.CharField(blank=True, null=True, max_length=6, unique=True)
+    order = models.IntegerField()
     is_active = models.BooleanField(default=True)
 
     class Meta:
