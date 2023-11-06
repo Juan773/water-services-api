@@ -234,7 +234,7 @@ class FunctionsViewSet(viewsets.ViewSet):
                                 order=2
                              )
                         list_add.append(data_quota_detail)
-                        # QuotaDetail.objects.create(**data_quota_detail)
+
                     qd = details.filter(quota_id=q.id, gloss=gloss_cost_user).first()
                     if qd:
                         qd.cost = cost_user_item
@@ -251,7 +251,7 @@ class FunctionsViewSet(viewsets.ViewSet):
                             order=3
                         )
                         list_add.append(data_quota_detail)
-                        # QuotaDetail.objects.create(**data_quota_detail)
+
                     qd = details.filter(quota_id=q.id, gloss=gloss_mora).first()
                     if qd:
                         qd.cost = cost_mora
@@ -268,7 +268,7 @@ class FunctionsViewSet(viewsets.ViewSet):
                             order=6
                         )
                         list_add.append(data_quota_detail)
-                        # QuotaDetail.objects.create(**data_quota_detail)
+
                     qd = details.filter(quota_id=q.id, gloss=gloss_reconnection).first()
                     if qd:
                         qd.cost = cost_reconnection_item
@@ -285,7 +285,7 @@ class FunctionsViewSet(viewsets.ViewSet):
                             order=5
                         )
                         list_add.append(data_quota_detail)
-                        # QuotaDetail.objects.create(**data_quota_detail)
+
                     qd = details.filter(quota_id=q.id, gloss=gloss_administration).first()
                     if qd:
                         qd.cost = cost_administrative

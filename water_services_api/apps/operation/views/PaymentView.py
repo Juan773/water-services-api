@@ -15,7 +15,7 @@ from water_services_api.apps.operation.models.Quota import Quota, QuotaDetail
 from water_services_api.apps.operation.permissions.Payment import PaymentPermissions as DisaryPermission
 from water_services_api.apps.operation.serializers.Payment import PaymentSerializer
 from water_services_api.apps.core.SearchFilter import search_filter, keys_add_none
-from water_services_api.apps.core.helpers import parse_success, parse_error, get_total_month
+from water_services_api.apps.core.helpers import parse_success, parse_error, get_total_month, update_total_month
 from water_services_api.apps.core.mixins import DefaultViewSetMixin
 from water_services_api.apps.core.pagination import CustomPagination
 
@@ -42,7 +42,7 @@ class PaymentViewSet(CustomPagination, DefaultViewSetMixin, viewsets.ModelViewSe
             date_register = data_parse['date']
 
         date_now = datetime.datetime.now().date()
-        date_pay = datetime.datetime.strptime(data_parse['date'], "%Y/%m/%d").date()
+        date_pay = datetime.datetime.strptime(data_parse['date'], "%Y-%m-%d").date()
 
         if date_pay < date_now:
             is_different_date = True
@@ -65,7 +65,7 @@ class PaymentViewSet(CustomPagination, DefaultViewSetMixin, viewsets.ModelViewSe
         if quotas.exists():
             min_quota = quotas.order_by('year_month')[0]
             count_min_q = Quota.objects.filter(client_id=data_parse['client_id'],
-                                               year_month__lt=min_quota.year_month).count()
+                                               year_month__lt=min_quota.year_month, is_paid=False).count()
             if count_min_q > 0:
                 result = dict(
                     estado=False,
@@ -111,7 +111,11 @@ class PaymentViewSet(CustomPagination, DefaultViewSetMixin, viewsets.ModelViewSe
         try:
             with transaction.atomic():
                 for item in quotas:
-                    details = quotas_details.filter(quota_id=item.id)
+                    if is_different_date is True:
+                        update_total_month(client.id, date_register, item.month, item.year)
+                        details = QuotaDetail.objects.filter(quota_id=item.id)
+                    else:
+                        details = quotas_details.filter(quota_id=item.id)
                     total = 0
                     for detail in details:
                         total = total + detail.amount

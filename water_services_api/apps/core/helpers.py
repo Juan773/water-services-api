@@ -9,7 +9,7 @@ from django.db.models.functions import Concat, LPad
 from water_services_api.apps.core.exceptions import NumberDecimalFormatException, ErrorNumberConvertDecimal
 from water_services_api.apps.operation.models.Client import Client
 from water_services_api.apps.operation.models.Plan import Plan
-from water_services_api.apps.operation.models.Quota import Quota
+from water_services_api.apps.operation.models.Quota import Quota, QuotaDetail
 from water_services_api.apps.operation.models.Service import Service
 from water_services_api.settings import IS_PRODUCTION
 
@@ -128,9 +128,9 @@ def to_bool(value):
 
 def get_total_month(client_id, date, month, year):
 
-    total_paid = Quota.objects.filter(month=month, year=year, is_paid=True).values('total').first()
-    if total_paid:
-        return total_paid
+    quota = Quota.objects.filter(month=month, year=year, is_paid=True).first()
+    if quota and quota.id:
+        return quota.total
     client = Client.objects.filter(pk=client_id).first()
     plan = Plan.objects.filter(pk=client.plan_id).first()
     services = Service.objects.filter(is_active=True).values_list('id', 'cost', named=True)
@@ -193,12 +193,17 @@ def get_total_month(client_id, date, month, year):
 
 def update_total_month(client_id, date, month, year):
 
-    total_paid = Quota.objects.filter(month=month, year=year, is_paid=True).values('total').first()
-    if total_paid:
-        return total_paid
+    quota_paid = Quota.objects.filter(month=month, year=year, is_paid=True).first()
+    if quota_paid and quota_paid.id:
+        raise Exception('El mes %s-%s ya fue cancelado.' % (month, year))
+
+    quota = Quota.objects.filter(month=month, year=year, is_paid=False).first()
+    if not quota:
+        raise Exception('El mes %s-%s no ha sido generado.' % (month, year))
+
     client = Client.objects.filter(pk=client_id).first()
     plan = Plan.objects.filter(pk=client.plan_id).first()
-    services = Service.objects.filter(is_active=True).values_list('id', 'cost', named=True)
+    services = Service.objects.filter(is_active=True).values_list('id', 'cost', 'name', 'order', named=True)
     cost_reconnection = 0
 
     date = datetime.datetime.strptime(date, '%Y-%m-%d').date()
@@ -232,25 +237,158 @@ def update_total_month(client_id, date, month, year):
             cost_reconnection = plan.reconnection_cost
 
     total = 0
+    cost_reconnection_item = 0
+    cost_user_item = 0
+    cost_associate_item = 0
+    cost_mora = 0
+    cost_administrative = 0
+    gloss_reconnection = 'Corte/Reconexion'
+    gloss_cost_user = 'Cuota:Contrapest. por servicio agua-Usuarios'
+    gloss_cost_associate = 'Cuota:Contrapest. por servicio agua-Socios'
+    gloss_mora = 'Mora'
+    gloss_administration = 'Gastos administrativos'
+    list_add = []
+    list_update = []
+
+    details = QuotaDetail.objects.filter(quota__client_id=client_id, quota__month=month, quota__year=year)
+
     if is_finalized_contract is False and year_month == year_month_date-1:
-        total = total + cost_reconnection
+        cost_reconnection_item = cost_reconnection
+    total = total + cost_reconnection_item
 
     if client and is_finalized_contract is False:
         if plan.client_type.code == 'socio':
-            total = total + plan.cost
+            cost_associate_item = plan.cost
         elif plan.client_type.code == 'user':
-            total = total + plan.cost
+            cost_user_item = plan.cost
+        total = total + cost_associate_item + cost_user_item
 
         if count == 1:
             if client.is_retired is False and plan.extension_days < day_date:
-                total = total + plan.mora
+                cost_mora = plan.mora
             elif client.is_retired is True and plan.retired_extension_days < day_date:
-                total = total + plan.mora
+                cost_mora = plan.mora
         elif count > 1:
-            total = total + plan.mora
+            cost_mora = plan.mora
+        total = total + cost_mora
+
         for detail in services:
-            total = total + detail.cost
+            cost_service = 0
+            if is_finalized_contract is False:
+                cost_service = detail.cost
+            total = total + cost_service
     elif plan and client:
-        total = total + plan.other_expenses
+        cost_administrative = plan.other_expenses
+        total = total + cost_administrative
+
+    for detail in services:
+        qd = details.filter(quota_id=quota.id, service_id=detail.id).first()
+        if qd:
+            qd.gloss = detail.name
+            qd.cost = detail.cost
+            qd.amount = detail.cost
+            qd.order = detail.order
+            list_update.append(qd)
+        else:
+            data_quota_detail = QuotaDetail(
+                quota_id=quota.id,
+                service_id=detail.id,
+                gloss=detail.name,
+                quantity=1,
+                cost=detail.cost,
+                amount=detail.cost,
+                order=detail.order
+            )
+            list_add.append(data_quota_detail)
+    qd = details.filter(quota_id=quota.id, gloss=gloss_cost_associate).first()
+
+    if qd:
+        qd.cost = cost_associate_item
+        qd.amount = cost_associate_item
+        list_update.append(qd)
+    else:
+        data_quota_detail = QuotaDetail(
+            quota_id=quota.id,
+            service_id=None,
+            gloss=gloss_cost_associate,
+            quantity=1,
+            cost=cost_associate_item,
+            amount=cost_associate_item,
+            order=2
+        )
+        list_add.append(data_quota_detail)
+
+    qd = details.filter(quota_id=quota.id, gloss=gloss_cost_user).first()
+    if qd:
+        qd.cost = cost_user_item
+        qd.amount = cost_user_item
+        list_update.append(qd)
+    else:
+        data_quota_detail = QuotaDetail(
+            quota_id=quota.id,
+            service_id=None,
+            gloss=gloss_cost_user,
+            quantity=1,
+            cost=cost_user_item,
+            amount=cost_user_item,
+            order=3
+        )
+        list_add.append(data_quota_detail)
+
+    qd = details.filter(quota_id=quota.id, gloss=gloss_mora).first()
+    if qd:
+        qd.cost = cost_mora
+        qd.amount = cost_mora
+        list_update.append(qd)
+    else:
+        data_quota_detail = QuotaDetail(
+            quota_id=quota.id,
+            service_id=None,
+            gloss=gloss_mora,
+            quantity=1,
+            cost=cost_mora,
+            amount=cost_mora,
+            order=6
+        )
+        list_add.append(data_quota_detail)
+
+    qd = details.filter(quota_id=quota.id, gloss=gloss_reconnection).first()
+    if qd:
+        qd.cost = cost_reconnection_item
+        qd.amount = cost_reconnection_item
+        list_update.append(qd)
+    else:
+        data_quota_detail = QuotaDetail(
+            quota_id=quota.id,
+            service_id=None,
+            gloss=gloss_reconnection,
+            quantity=1,
+            cost=cost_reconnection_item,
+            amount=cost_reconnection_item,
+            order=5
+        )
+        list_add.append(data_quota_detail)
+
+    qd = details.filter(quota_id=quota.id, gloss=gloss_administration).first()
+    if qd:
+        qd.cost = cost_administrative
+        qd.amount = cost_administrative
+        list_update.append(qd)
+    else:
+        data_quota_detail = QuotaDetail(
+            quota_id=quota.id,
+            service_id=None,
+            gloss=gloss_administration,
+            quantity=1,
+            cost=cost_administrative,
+            amount=cost_administrative,
+            order=8
+        )
+        list_add.append(data_quota_detail)
+
+    quota.total = total
+    quota.save()
+    QuotaDetail.objects.bulk_update(list_update, ["gloss", "cost", "amount"])
+    QuotaDetail.objects.bulk_create(list_add)
 
     return total
