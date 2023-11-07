@@ -21,6 +21,7 @@ class QuotaViewSet(CustomPagination, DefaultViewSetMixin, viewsets.ModelViewSet)
     search_fields = ('client__person__fullname', 'client__person__first_name', 'client__person__last_name', 'month',
                      'year')
     ordering_fields = ('client__person__last_name', 'client__person__fullname', )
+    filter_fields = ('client_id',)
 
     @action(detail=False, methods=['post'], permission_classes=[DisaryPermission, ],
             url_path='add', url_name='add')
