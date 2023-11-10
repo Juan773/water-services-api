@@ -62,6 +62,15 @@ def str_to_array(data):
         return []
 
 
+def get_month_name(month):
+    try:
+        months = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre',
+                  'Noviembre', 'Diciembre']
+        return months[month]
+    except Exception:
+        return ''
+
+
 def normalize_query(query_string,
                     findterms=re.compile(r'"([^"]+)"|(\S+)').findall,
                     normspace=re.compile(r'\s{2,}').sub):
