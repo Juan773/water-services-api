@@ -3,7 +3,7 @@
     "src": "water_services_api/wsgi.py",
     "use": "@vercel/python",
     "config": {
-      "maxLambdaSize" : "10000mb","runtime":"python3.11"
+      "maxLambdaSize" : "10000mb","runtime":"python3"
     }
   }],
   "routes": [{
@@ -11,3 +11,5 @@
     "dest": "water_services_api/wsgi.py"
   }]
 }
+
+
